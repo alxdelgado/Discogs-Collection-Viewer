@@ -1,5 +1,14 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "devCommand": "npm run dev -- --port $PORT",
+  "buildCommand": "npm run build",
   "crons": [
     { "path": "/api/admin/sync", "schedule": "0 6 * * *" }
+  ], 
+  "rewrites": [
+    {
+      "source": "/api/public/release/:releaseId",
+      "destination": "/api/public/release?releaseId=:releaseId"
+    }
   ]
 }
