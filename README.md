@@ -1,73 +1,114 @@
-# React + TypeScript + Vite
+# Discogs Collection Viewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A personal vinyl collection browser built with React, TypeScript, and Vite — deployed on Vercel. Browse your Discogs collection, search by artist or title, and click any record to view its tracklist and embedded YouTube videos.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- Grid view of your full Discogs collection with cover art, title, artist, and year
+- Live search filtering by artist or title
+- Slide-in detail panel on card click showing:
+  - Full-size cover image
+  - Tracklist with track positions and durations
+  - Embedded YouTube videos (when available)
+- Collection snapshot cached in Vercel Blob (refreshed daily via cron)
+- Individual release details cached in Vercel Blob (30-day TTL)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Vite |
+| Backend | Vercel Serverless Functions (Node.js runtime) |
+| Storage | Vercel Blob |
+| Data | Discogs API |
+| Hosting | Vercel |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Project Structure
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+├── src/
+│   ├── App.tsx          # Main UI — collection grid + detail panel
+│   └── App.css          # Styles
+├── api/
+│   ├── public/
+│   │   ├── collection.ts  # GET /api/public/collection — serves cached snapshot
+│   │   └── release.ts     # GET /api/public/release/:releaseId — release details
+│   └── admin/
+│       └── sync.ts        # GET /api/admin/sync — fetches & caches full collection
+├── lib/
+│   ├── types.ts           # Shared TypeScript types
+│   ├── discogsClient.ts   # Discogs API pagination client
+│   ├── normalize.ts       # Maps raw Discogs data to internal types
+│   └── blobStore.ts       # Vercel Blob read/write helpers
+└── vercel.json            # Cron schedule + URL rewrites
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Local Development
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Prerequisites
+
+- Node.js 18+
+- [Vercel CLI](https://vercel.com/docs/cli): `npm i -g vercel`
+- A [Discogs personal access token](https://www.discogs.com/settings/developers)
+
+### Setup
+
+1. Clone the repo and install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Link to your Vercel project and pull environment variables:
+   ```bash
+   vercel link
+   vercel env pull
+   ```
+
+3. Ensure the following are set in your Vercel project environment variables (Development):
+
+   | Variable | Description |
+   |---|---|
+   | `DISCOGS_TOKEN` | Discogs personal access token |
+   | `DISCOGS_USERNAME` | Your Discogs username |
+   | `DISCOGS_USER_AGENT` | User-Agent string for Discogs API requests |
+   | `BLOB_READ_WRITE_TOKEN` | Vercel Blob read/write token |
+   | `ADMIN_SYNC_SECRET` | Secret header value for the sync endpoint |
+
+4. Start the dev server (runs frontend + API functions together):
+   ```bash
+   vercel dev
+   ```
+
+5. Populate the collection snapshot on first run:
+   ```bash
+   curl http://localhost:3000/api/admin/sync -H "x-admin-secret: <your_secret>"
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## API Endpoints
+
+### `GET /api/public/collection`
+Returns the full cached collection snapshot from Vercel Blob.
+
+### `GET /api/public/release/:releaseId`
+Returns release details (tracklist, videos, cover image) for a single release. Validates that the release belongs to the collection, then fetches from Discogs and caches the result in Vercel Blob for 30 days.
+
+### `GET /api/admin/sync`
+Fetches the full collection from Discogs and writes a new snapshot to Vercel Blob. Requires either the `x-admin-secret` header or the Vercel cron `User-Agent`. Runs automatically every day at 06:00 UTC.
+
+---
+
+## Deployment
+
+Push to `main` — Vercel deploys automatically. Environment variables are managed in the Vercel project dashboard.
