@@ -12,6 +12,7 @@ type DiscogsCollectionResponse = {
       cover_image?: string;
       uri?: string;
       artists?: Array<{ name: string }>;
+      labels?: Array<{ name: string; catno?: string }>;
     };
   }>;
 };

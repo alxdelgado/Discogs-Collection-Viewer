@@ -3,6 +3,7 @@ export type CollectionItem = {
   releaseId: number;
   title: string;
   artists: { name: string }[];
+  labels: { name: string; catno?: string }[];
   year?: number;
   thumbUrl?: string;
   coverImageUrl?: string;

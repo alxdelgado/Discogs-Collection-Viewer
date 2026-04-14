@@ -8,6 +8,7 @@ export function normalize(releases: any[]): CollectionItem[] {
       releaseId: r.id,
       title: bi.title ?? "Unknown",
       artists: (bi.artists ?? []).map((a: any) => ({ name: a.name })),
+      labels: (bi.labels ?? []).map((l: any) => ({ name: l.name, catno: l.catno })),
       year: bi.year,
       thumbUrl: bi.thumb,
       coverImageUrl: bi.cover_image,

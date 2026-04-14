@@ -35,7 +35,12 @@ export default function App() {
     if (!query) return data.items;
     return data.items.filter(i => {
       const artist = i.artists.map(a => a.name).join(" ").toLowerCase();
-      return i.title.toLowerCase().includes(query) || artist.includes(query);
+      const label = i.labels.map(l => l.name).join(" ").toLowerCase();
+      return (
+        i.title.toLowerCase().includes(query) ||
+        artist.includes(query) ||
+        label.includes(query)
+      );
     });
   }, [data, q]);
 
