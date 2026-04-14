@@ -4,6 +4,16 @@ A personal vinyl collection browser built with React, TypeScript, and Vite — d
 
 ---
 
+## Screenshots
+
+**Collection grid**
+![Collection grid](docs/screenshot-collection.png)
+
+**Release detail panel**
+![Release detail panel](docs/screenshot-detail.png)
+
+---
+
 ## Features
 
 - Grid view of your full Discogs collection with cover art, title, artist, and year
