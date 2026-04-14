@@ -17,7 +17,6 @@ function getYouTubeEmbedUrl(uri: string): string | null {
 export default function App() {
   const [data, setData] = useState<CollectionSnapshot | null>(null);
   const [q, setQ] = useState("");
-
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [release, setRelease] = useState<ReleaseDetails | null>(null);
   const [releaseLoading, setReleaseLoading] = useState(false);
@@ -36,7 +35,7 @@ export default function App() {
     if (!query) return data.items;
     return data.items.filter(i => {
       const artist = i.artists.map(a => a.name).join(" ").toLowerCase();
-      return (i.title.toLowerCase().includes(query) || artist.includes(query));
+      return i.title.toLowerCase().includes(query) || artist.includes(query);
     });
   }, [data, q]);
 
@@ -58,7 +57,7 @@ export default function App() {
       })
       .then(d => { setRelease(d); setReleaseLoading(false); })
       .catch((err: unknown) => {
-        setReleaseError(err instanceof Error ? err.message : "Failed to load release");
+        setReleaseError(err instanceof Error ? err.message : "Failed to load");
         setReleaseLoading(false);
       });
   }
@@ -69,134 +68,166 @@ export default function App() {
     setReleaseError(null);
   }
 
-  if (!data) return <div style={{ padding: 24 }}>Loading… (run sync if needed)</div>;
+  if (!data) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-text">LOADING COLLECTION</div>
+      </div>
+    );
+  }
+
+  const embeds = release
+    ? release.videos
+        .map(v => ({ title: v.title, embedUrl: getYouTubeEmbedUrl(v.uri) }))
+        .filter((v): v is { title: string; embedUrl: string } => v.embedUrl !== null)
+    : [];
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 0, padding: 24, maxWidth: 1400, margin: "0 auto" }}>
-      {/* Left: collection */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <h1>{data.username} — Discogs Collection</h1>
-        <div style={{ opacity: 0.7, marginBottom: 12 }}>
-          {data.totalItems} items • updated {new Date(data.fetchedAt).toLocaleString()}
+    <div className="app">
+      {/* ── Header ── */}
+      <header className="site-header">
+        <div className="header-inner">
+          <div className="header-brand">
+            <div className="brand-name">{data.username}</div>
+            <div className="brand-sub">Record Collection</div>
+          </div>
+
+          <div className="header-search">
+            <input
+              className="search-input"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Search artists, titles…"
+              aria-label="Search collection"
+            />
+          </div>
+
+          <div className="header-right">
+            <div className="header-updated">
+              synced {new Date(data.fetchedAt).toLocaleDateString()}
+            </div>
+            <div className="header-stat">
+              <span className="stat-count">{items.length}</span>
+              <span className="stat-label">Records</span>
+            </div>
+          </div>
         </div>
+      </header>
 
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search artist or title…"
-          style={{ width: "100%", padding: 12, marginBottom: 16, boxSizing: "border-box" }}
-        />
+      {/* ── Body ── */}
+      <div className={`app-body${selectedId !== null ? " panel-open" : ""}`}>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
-          {items.map((i) => (
+        {/* Grid */}
+        <div className="collection-grid">
+          {items.length === 0 && (
+            <div className="empty-state">NO RECORDS FOUND</div>
+          )}
+          {items.map(i => (
             <div
               key={i.instanceId}
-              className={`card${selectedId === i.releaseId ? " selected" : ""}`}
+              className={`record-card${selectedId === i.releaseId ? " active" : ""}`}
               onClick={() => handleCardClick(i.releaseId)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => e.key === "Enter" && handleCardClick(i.releaseId)}
             >
-              {i.thumbUrl && <img src={i.thumbUrl} alt="" style={{ width: "100%", borderRadius: 6 }} />}
-              <div style={{ marginTop: 8, fontWeight: 700, fontSize: 13 }}>{i.title}</div>
-              <div style={{ opacity: 0.8, fontSize: 12 }}>{i.artists.map(a => a.name).join(", ")}</div>
-              <div style={{ opacity: 0.6, fontSize: 12 }}>{i.year ?? ""}</div>
+              <div className="card-cover">
+                {i.thumbUrl
+                  ? <img src={i.thumbUrl} alt={i.title} loading="lazy" />
+                  : <div className="card-cover-placeholder" />
+                }
+                <div className="card-overlay">
+                  <span>{selectedId === i.releaseId ? "OPEN" : "VIEW"}</span>
+                </div>
+              </div>
+              <div className="card-info">
+                <div className="card-title">{i.title}</div>
+                <div className="card-artist">{i.artists.map(a => a.name).join(", ")}</div>
+                {i.year && <div className="card-year">{i.year}</div>}
+              </div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Right: detail panel */}
-      <div className={`panel${selectedId !== null ? " open" : ""}`}>
-        <button
-          onClick={closePanel}
-          style={{
-            position: "absolute", top: 16, right: 16,
-            background: "none", border: "none", color: "inherit",
-            fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 4
-          }}
-          aria-label="Close panel"
-        >
-          ×
-        </button>
+        {/* Detail panel */}
+        <aside className={`detail-panel${selectedId !== null ? " open" : ""}`}>
+          <button className="panel-close" onClick={closePanel} aria-label="Close panel">
+            ESC ✕
+          </button>
 
-        {releaseLoading && (
-          <div style={{ paddingTop: 48, textAlign: "center", opacity: 0.7 }}>Loading…</div>
-        )}
+          {releaseLoading && (
+            <div className="panel-loading">LOADING…</div>
+          )}
 
-        {releaseError && (
-          <div style={{ paddingTop: 48, color: "#f87171" }}>{releaseError}</div>
-        )}
+          {releaseError && (
+            <div className="panel-error">{releaseError}</div>
+          )}
 
-        {release && !releaseLoading && (
-          <div style={{ paddingTop: 8 }}>
-            {(release.coverImageUrl ?? release.thumbUrl) && (
-              <img
-                src={release.coverImageUrl ?? release.thumbUrl}
-                alt=""
-                style={{ width: "100%", borderRadius: 8, marginBottom: 16 }}
-              />
-            )}
-
-            <h2 style={{ margin: "0 0 4px", fontSize: 18, paddingRight: 28 }}>{release.title}</h2>
-            <div style={{ opacity: 0.8, marginBottom: 4 }}>
-              {release.artists.map(a => a.name).join(" & ")}
-            </div>
-            {release.year && (
-              <div style={{ opacity: 0.6, fontSize: 14, marginBottom: 16 }}>{release.year}</div>
-            )}
-
-            {release.tracklist.length > 0 && (
-              <>
-                <hr style={{ borderColor: "#333", margin: "12px 0" }} />
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>Tracklist</div>
-                <div style={{ fontSize: 13 }}>
-                  {release.tracklist.map((t, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "flex", justifyContent: "space-between", gap: 8,
-                        padding: "4px 0", borderBottom: "1px solid #222"
-                      }}
-                    >
-                      <span style={{ opacity: 0.5, flexShrink: 0, minWidth: 24 }}>{t.position ?? ""}</span>
-                      <span style={{ flex: 1 }}>{t.title}</span>
-                      {t.duration && <span style={{ opacity: 0.5, flexShrink: 0 }}>{t.duration}</span>}
+          {release && !releaseLoading && (
+            <div className="panel-content">
+              {/* Cover */}
+              <div className="panel-cover">
+                {(release.coverImageUrl ?? release.thumbUrl)
+                  ? <img src={release.coverImageUrl ?? release.thumbUrl} alt={release.title} />
+                  : (
+                    <div className="panel-cover-placeholder">
+                      <span>NO IMAGE</span>
                     </div>
-                  ))}
+                  )
+                }
+              </div>
+
+              {/* Title / Meta */}
+              <div className="panel-info">
+                <h2 className="panel-title">{release.title}</h2>
+                <div className="panel-artist">
+                  {release.artists.map(a => a.name).join(" & ")}
                 </div>
-              </>
-            )}
+                {release.year && (
+                  <span className="panel-year">{release.year}</span>
+                )}
+              </div>
 
-            {(() => {
-              const embeds = release.videos
-                .map(v => ({ title: v.title, embedUrl: getYouTubeEmbedUrl(v.uri) }))
-                .filter((v): v is { title: string; embedUrl: string } => v.embedUrl !== null);
+              {/* Tracklist */}
+              {release.tracklist.length > 0 && (
+                <div className="panel-section">
+                  <div className="section-label">Tracklist</div>
+                  <div className="tracklist">
+                    {release.tracklist.map((t, idx) => (
+                      <div key={idx} className="track-row">
+                        <span className="track-pos">{t.position ?? String(idx + 1).padStart(2, "0")}</span>
+                        <span className="track-title">{t.title}</span>
+                        {t.duration && <span className="track-dur">{t.duration}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              if (embeds.length === 0) return null;
-
-              return (
-                <>
-                  <hr style={{ borderColor: "#333", margin: "16px 0 12px" }} />
-                  <div style={{ fontWeight: 700, marginBottom: 12 }}>Videos</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Videos */}
+              {embeds.length > 0 && (
+                <div className="panel-section">
+                  <div className="section-label">Videos</div>
+                  <div className="videos">
                     {embeds.map((v, idx) => (
                       <div key={idx}>
-                        <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>{v.title}</div>
-                        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: 6 }}>
+                        <div className="video-label">{v.title}</div>
+                        <div className="video-frame">
                           <iframe
                             src={v.embedUrl}
                             title={v.title}
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
-                            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
                           />
                         </div>
                       </div>
                     ))}
                   </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
