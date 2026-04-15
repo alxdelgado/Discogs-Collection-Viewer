@@ -93,8 +93,7 @@ export default function App() {
       <header className="site-header">
         <div className="header-inner">
           <div className="header-brand">
-            <div className="brand-name">{data.username}</div>
-            <div className="brand-sub">Record Collection</div>
+            <div className="brand-name">Esperáme Records</div>
           </div>
 
           <div className="header-search">
