@@ -216,6 +216,22 @@ export default function App() {
     startProgressTimer();
   }
 
+  function prevTrack() {
+    if (!release || activeTrackIdx === null) return;
+    for (let i = activeTrackIdx - 1; i >= 0; i--) {
+      const videoId = matchTrackToVideoId(release.tracklist[i].title, release.videos);
+      if (videoId) { playTrack(videoId, i); return; }
+    }
+  }
+
+  function nextTrack() {
+    if (!release || activeTrackIdx === null) return;
+    for (let i = activeTrackIdx + 1; i < release.tracklist.length; i++) {
+      const videoId = matchTrackToVideoId(release.tracklist[i].title, release.videos);
+      if (videoId) { playTrack(videoId, i); return; }
+    }
+  }
+
   function togglePlayPause() {
     const player = ytPlayerRef.current;
     if (!player || !activeVideoId) return;
@@ -462,33 +478,70 @@ export default function App() {
             )}
           </div>
 
-          {/* Mini-player — fixed footer, visible when a track is active */}
+          {/* Mini-player — glass card footer, visible when a track is active */}
           {activeVideoId && release && (
             <div className="mini-player">
-              <div className="mini-player-track">
-                {activeTrackIdx !== null ? release.tracklist[activeTrackIdx]?.title : ""}
-              </div>
-              <div className="mini-player-controls">
-                <button
-                  className="mp-play-btn"
-                  onClick={togglePlayPause}
-                  aria-label={isPlaying ? "Pause" : "Play"}
-                >
-                  {isPlaying ? "▮▮" : "▶"}
-                </button>
-                <span className="mini-player-time">{formatTime(currentTime)}</span>
-                <div
-                  className="progress-bar"
-                  onClick={handleSeek}
-                  role="slider"
-                  aria-label="Seek"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(progress * 100)}
-                >
-                  <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
+              {/* Blurred album art background */}
+              {(release.coverImageUrl ?? release.thumbUrl) && (
+                <div className="mini-player-bg" aria-hidden="true">
+                  <img src={release.coverImageUrl ?? release.thumbUrl} alt="" />
                 </div>
-                <span className="mini-player-time">{formatTime(playerDuration)}</span>
+              )}
+
+              {/* Glass content layer */}
+              <div className="mini-player-inner">
+                {/* Track info row */}
+                <div className="mp-top-row">
+                  <div className="mp-track-info">
+                    {(release.coverImageUrl ?? release.thumbUrl) && (
+                      <img
+                        className="mp-thumb"
+                        src={release.coverImageUrl ?? release.thumbUrl}
+                        alt={release.title}
+                      />
+                    )}
+                    <div className="mp-text">
+                      <div className="mp-artist-name">
+                        {release.artists.map(a => a.name).join(", ")}
+                      </div>
+                      <div className="mini-player-track">
+                        {activeTrackIdx !== null ? release.tracklist[activeTrackIdx]?.title : ""}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="mp-progress-section">
+                  <span className="mini-player-time">{formatTime(currentTime)}</span>
+                  <div
+                    className="progress-bar"
+                    onClick={handleSeek}
+                    role="slider"
+                    aria-label="Seek"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(progress * 100)}
+                  >
+                    <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
+                  </div>
+                  <span className="mini-player-time">
+                    -{formatTime(Math.max(0, playerDuration - currentTime))}
+                  </span>
+                </div>
+
+                {/* Playback controls */}
+                <div className="mp-controls-row">
+                  <button className="mp-glass-btn" onClick={prevTrack} aria-label="Previous track">⏮</button>
+                  <button
+                    className="mp-glass-btn mp-play-center"
+                    onClick={togglePlayPause}
+                    aria-label={isPlaying ? "Pause" : "Play"}
+                  >
+                    {isPlaying ? "⏸" : "▶"}
+                  </button>
+                  <button className="mp-glass-btn" onClick={nextTrack} aria-label="Next track">⏭</button>
+                </div>
               </div>
             </div>
           )}
