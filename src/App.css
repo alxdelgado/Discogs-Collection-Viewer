@@ -356,6 +356,8 @@ body::after {
   top: var(--header-h);
   height: calc(100vh - var(--header-h));
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   transition: width 0.38s cubic-bezier(0.4, 0, 0.2, 1),
               margin-left 0.38s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -363,13 +365,20 @@ body::after {
 .detail-panel.open {
   width: var(--panel-w);
   margin-left: 36px;
-  overflow-y: auto;
   border-left: 1px solid var(--border);
 }
 
-.detail-panel::-webkit-scrollbar { width: 3px; }
-.detail-panel::-webkit-scrollbar-track { background: transparent; }
-.detail-panel::-webkit-scrollbar-thumb { background: rgba(26,24,32,0.1); border-radius: 2px; }
+/* Scrollable area — takes all remaining height above mini-player */
+.panel-scrollable {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.panel-scrollable::-webkit-scrollbar { width: 3px; }
+.panel-scrollable::-webkit-scrollbar-track { background: transparent; }
+.panel-scrollable::-webkit-scrollbar-thumb { background: rgba(26,24,32,0.1); border-radius: 2px; }
 
 .panel-close {
   position: absolute;
@@ -504,22 +513,29 @@ body::after {
   text-transform: uppercase;
 }
 
-/* Tracklist */
+/* ─── Tracklist ──────────────────────────────────────────────── */
 .tracklist { display: flex; flex-direction: column; }
 
 .track-row {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   color: var(--fg-medium);
   letter-spacing: 0.02em;
+  transition: color 0.15s;
 }
 
 .track-row:last-child { border-bottom: none; }
+
+.track-row.playable { cursor: pointer; }
+
+.track-row.playable:hover { color: var(--fg-strong); }
+
+.track-row.playing { color: var(--fg-strong); }
 
 .track-pos {
   color: var(--accent-cool);
@@ -529,6 +545,25 @@ body::after {
   letter-spacing: 0.1em;
 }
 
+/* Play/pause button replaces track-pos for playable tracks */
+.track-play-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-muted);
+  font-size: 0.5rem;
+  min-width: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.track-row.playable:hover .track-play-btn { color: var(--accent-cool); }
+.track-row.playing .track-play-btn { color: var(--accent-hot); }
+
 .track-title { flex: 1; }
 
 .track-dur {
@@ -537,33 +572,85 @@ body::after {
   font-size: 0.58rem;
 }
 
-/* Videos */
-.videos { display: flex; flex-direction: column; gap: 20px; }
+/* ─── Mini Player ────────────────────────────────────────────── */
+.mini-player {
+  flex-shrink: 0;
+  background: var(--bg-dark);
+  color: var(--fg-light);
+  padding: 14px 18px 16px;
+  border-top: 1px solid rgba(250, 250, 248, 0.07);
+}
 
-.video-label {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  color: var(--fg-muted);
-  letter-spacing: 0.06em;
-  margin-bottom: 8px;
+.mini-player-track {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: rgba(250, 250, 248, 0.82);
+  letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 10px;
 }
 
-.video-frame {
+.mini-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mp-play-btn {
+  background: none;
+  border: 1px solid rgba(250, 250, 248, 0.18);
+  color: rgba(250, 250, 248, 0.75);
+  cursor: pointer;
+  font-size: 0.55rem;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.mp-play-btn:hover {
+  border-color: rgba(250, 250, 248, 0.55);
+  color: rgba(250, 250, 248, 1);
+}
+
+.mini-player-time {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: rgba(250, 250, 248, 0.35);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(250, 250, 248, 0.1);
+  cursor: pointer;
   position: relative;
-  padding-bottom: 56.25%;
-  height: 0;
-  overflow: hidden;
-  background: rgba(26, 24, 32, 0.05);
+  border-radius: 1px;
+  transition: height 0.15s;
 }
 
-.video-frame iframe {
+.progress-bar:hover { height: 4px; }
+
+.progress-fill {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  border: none;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--accent-cool);
+  border-radius: 1px;
+  transition: width 0.1s linear;
+  pointer-events: none;
 }
 
 /* ─── Empty state ────────────────────────────────────────────── */
